@@ -13,7 +13,7 @@
 char S_message::buffer[32];
 char* S_message::toString(void)
 {
-  snprintf(buffer, sizeof(buffer), "%2u.%02u, %2u.%02u, ",
+  snprintf(buffer, sizeof(buffer), "%2u.%02u, %2u.%02u, %2u.%02u, %2u.%02u",
       voltage >> 8, ( voltage & 0xFF ) * 100 / 256,
       v1 >> 8, ( v1 & 0xFF ) * 100 / 256,
       v2 >> 8, ( v2 & 0xFF ) * 100 / 256,
@@ -21,6 +21,18 @@ char* S_message::toString(void)
       );
   return buffer;
 };
+
+//char S_message::pbuffer[64];
+//char* S_message::toPostString(void)
+//{
+//  snprintf(pbuffer, sizeof(pbuffer), "{\"mac\":\"" + mac_str + "\"}",
+//      voltage >> 8, ( voltage & 0xFF ) * 100 / 256,
+//      v1 >> 8, ( v1 & 0xFF ) * 100 / 256,
+//      v2 >> 8, ( v2 & 0xFF ) * 100 / 256,
+//      v3 >> 8, ( v3 & 0xFF ) * 100 / 256
+//  );
+//  return pbuffer;
+//};
 
 
 char S_message_th::buffer[32];

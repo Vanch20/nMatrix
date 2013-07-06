@@ -19,19 +19,19 @@
 
 // Array of nodes we are aware of
 const short max_active_nodes = 10;
-uint16_t active_nodes[max_active_nodes];
+int active_nodes[max_active_nodes];
 short num_active_nodes = 0;
 short next_ping_node_index = 0;
-const uint16_t node_id_set[10] = { 00, 02, 05, 012, 015, 022, 025, 032, 035, 045 };
+const int node_id_set[10] = { 00, 02, 05, 012, 015, 022, 025, 032, 035, 045 };
 
 // Prototypes for functions to send & handle messages
-bool send_T(uint16_t to);
-bool send_N(uint16_t to);
-bool send_S(uint16_t to);
+bool send_T(int to);
+bool send_N(int to);
+bool send_S(int to);
 void handle_T(RF24NetworkHeader& header);
 void handle_N(RF24NetworkHeader& header);
 void handle_S(RF24NetworkHeader& header);
-void add_node(uint16_t node);
+void add_node(int node);
 
 const char webhost[] PROGMEM = "api.rarasun.com";
 const char url_basereg[] PROGMEM  = "/basepoint/reg/";
@@ -53,7 +53,7 @@ const int rf_csn = 10;
 
 // RF24 Config
 RF24 radio(rf_ce, rf_csn);
-RF24Network network(radio);
+RF24Network rfnetwork(radio);
 
 void setup () 
 {
@@ -97,7 +97,7 @@ void setup ()
   // Setting up RF24
   SPI.begin();
   radio.begin();
-  network.begin(/*channel*/ 90, /*node address*/ node_id);
+  rfnetwork.begin(/*channel*/ 90, /*node address*/ node_id);
   
   timer = - REQUEST_RATE;
 }
@@ -119,11 +119,11 @@ void loop ()
     }
   }
   
-  network.update();
-  while ( network.available() )
+  rfnetwork.update();
+  while ( rfnetwork.available() )
   {
     RF24NetworkHeader header;
-    network.peek(header);
+    rfnetwork.peek(header);
     
     switch (header.type)
     {
@@ -141,7 +141,7 @@ void loop ()
         
       default:
         printf_P(PSTR("*** WARNING *** Unknown message type %c\n\r"), header.type);
-        network.read(header,0,0);
+        rfnetwork.read(header, 0, 0);
         break;
     };
     
@@ -181,7 +181,7 @@ void handle_T(RF24NetworkHeader& header)
 {
   // The 'T' message is just a ulong, containing the time
   unsigned long message;
-  network.read(header, &message, sizeof(unsigned long));
+  rfnetwork.read(header, &message, sizeof(unsigned long));
   printf_P(PSTR("%lu: APP Received %lu from 0%o\n\r"), millis(), message, header. from_node);
 
   // If this message is from ourselves or the base, don't bother adding it to the active nodes.
@@ -196,7 +196,7 @@ void handle_N(RF24NetworkHeader& header)
 {
   static uint16_t incoming_nodes[max_active_nodes];
 
-  network.read(header,&incoming_nodes,sizeof(incoming_nodes));
+  rfnetwork.read(header,&incoming_nodes,sizeof(incoming_nodes));
   printf_P(PSTR("%lu: APP Received nodes from 0%o\n\r"),millis(),header.from_node);
 
   int i = 0;
@@ -205,18 +205,32 @@ void handle_N(RF24NetworkHeader& header)
 }
 
 /**
- * Handle an 'S' message
+ * Handle an 'S' message for sensor messages
  */
 void handle_S(RF24NetworkHeader& header)
 {
-  static uint16_t incoming_nodes[max_active_nodes];
-
-  network.read(header,&incoming_nodes,sizeof(incoming_nodes));
-  printf_P(PSTR("%lu: APP Received nodes from 0%o\n\r"),millis(),header.from_node);
-
-  int i = 0;
-  while ( i < max_active_nodes && incoming_nodes[i] > 00 )
-    add_node(incoming_nodes[i++]);
+  S_message message;
+  rfnetwork.read(header, &message, sizeof(message));
+  printf_P(PSTR("%lu: APP Received %s from 0%o\n\r"), millis(), message.toString(), header.from_node);
+  
+  // send to web
+  
+  char post_string[300];
+  switch (message.type)
+  {
+    case '1':  // Sensor for temperature and humidity
+      snprintf(post_string, sizeof(post_string), "{\"node_id\":\"%o\", \"voltage\":\"%s\", \"v1\":\"%s\"}", header.from_node, message.voltage, message.v1);
+      break;
+      
+    default:
+      printf_P(PSTR("*** WARNING *** Unknown message type %c from %s\n\r"), message.type, header.from_node);
+      break;
+  };
+  
+  Serial.println("\n>>> REQ --> Get Update Sensor Message");
+  ether.packetLoop(ether.packetReceive());
+  ether.httpPost(PSTR("/node/update/"), webhost, "", post_string, cb_update);
+  //ether.browseUrl(PSTR("/node/update/"), post_string, webhost, cb_update);
 }
 
 /**

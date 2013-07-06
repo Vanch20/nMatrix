@@ -4,37 +4,37 @@
  */
 
 #include <avr/pgmspace.h>
+#include <avr/eeprom.h>
 #include <RF24Network.h>
 #include <RF24.h>
 #include <SPI.h>
 #include <Tictocs.h>
-#include <Button.h>
 #include <TictocTimer.h>
-#include "nodeconfig.h"
 #include "sleep.h"
 #include "S_message.h"
 #include "printf.h"
 
 // Config
 const int node_type = 1;
-long node_id = 0;
+long node_id = 2;
 const int node_id_address = 10; // in eeprom
 const int base_node_id_address = 100; // in eeprom
-const int node_unique_id = "a"; 
+const char node_unique_id[] = "a"; 
 
 // How often to send result to the other unit
 const unsigned long interval = 2000; //ms
 
 // Pins for sensors
-const int voltage_pin = A2;
-const int temp_pin = A3;
+const int pin_voltage = A2;
+const int pin_temp = A3;
+const int pin_reset = A4
 
 // Pins for LEDs, or '0' for no LED connected
 const int led_red = 0; 
 const int led_green = 0;
 
 // What voltage is a reading of 1023?
-const unsigned voltage_reference = 2.4 * 256; // 4.1V
+const unsigned voltage_reference = 3 * 256; // 3V
 
 // How many measurements to take.  64*1024 = 65536, so 64 is the max we can fit in a uint16_t.
 const int num_measurements = 64;
@@ -67,7 +67,11 @@ void setup(void)
 void loop(void)
 {
   /*** TODOs: auto find basenode and get nodeid ***/
-  
+  if (node_id == 0)
+  {
+    RF24NetworkHeader header(/*to node*/ 0, 'N');
+    bool ok = network.write(header, &message, sizeof(message));
+  }
   
   network.update();
 

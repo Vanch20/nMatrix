@@ -20,14 +20,16 @@
  */
 struct S_message
 {
-  uint16_t v1;
-  uint16_t v2;
-  uint16_t v3;
-  uint16_t voltage;
-  uint16_t type;
+  int v1;
+  int v2;
+  int v3;
+  int voltage;
+  char type;
   static char buffer[];
-  S_message(void): v1(0), v2(0), v3(0), voltage(0), type(0) {}
+  static char pbuffer[];
+  S_message(void): v1(0), v2(0), v3(0), voltage(0) {}
   char* toString(void);
+  char* toPostString(void);
 };
 
 struct S_message_th
