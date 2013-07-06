@@ -7,11 +7,12 @@
 #include <RF24.h>
 #include <SPI.h>
 #include <DHT.h>
+#include "messages.h"
 
 const int pin_sensor = 2;
 
 // nRF24L01(+) radio attached using Getting Started board 
-RF24 radio(9,10);
+RF24 radio(8,9);
 
 // Network uses that radio
 RF24Network network(radio);
@@ -31,13 +32,7 @@ unsigned long last_sent;
 float humidity;
 float temperature;
 
-// Structure of our payload
-struct payload_t
-{
-  unsigned long ms;
-  float temperature;
-  float humidity;
-};
+DHT dht;
 
 void setup(void)
 {
@@ -47,12 +42,12 @@ void setup(void)
   SPI.begin();
   radio.begin();
   network.begin(/*channel*/ 90, /*node address*/ this_node);
+  
+  dht.setup(pin_sensor);
 }
 
 void loop(void)
 {
-  dht.setup(pin_sensor);
-  
   // Pump the network regularly
   network.update();
 
@@ -65,8 +60,10 @@ void loop(void)
     humidity = dht.getHumidity();
     temperature = dht.getTemperature();
     
+    Serial.print(temperature);
+    
     Serial.print("Sending...");
-    payload_t payload = { millis(), temperature, humidity};
+    message_dht11 payload = { millis(), 1, 0, temperature, humidity};
     RF24NetworkHeader header(/*to node*/ other_node);
     bool ok = network.write(header,&payload,sizeof(payload));
     if (ok)
