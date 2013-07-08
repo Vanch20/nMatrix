@@ -42,9 +42,16 @@ static void my_result_cb (byte status, word off, word len) {
   Serial.print(millis() - timer);
   Serial.println(" ms");
 //  Serial.println( (const char*) Ethernet::buffer + off);
-  String r = char(Ethernet::buffer + off);
+
+  /** need test **/
+  //char* test = (char*) Ethernet::buffer + off;
+  char r[100];
+  sprintf(r, "%s", Ethernet::buffer + off);
   Serial.print("r:");
   Serial.print(r);
+  /** **/
+  
+  //String r = char(Ethernet::buffer + off);
 //  server_result = r.substring(r.indexOf("{"));
 //  Serial.print("result:");
 //  Serial.println(r);
