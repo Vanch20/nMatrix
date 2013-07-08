@@ -24,7 +24,7 @@ const uint16_t this_node = 1;
 const uint16_t other_node = 0;
 
 // How often to send 'hello world to the other unit
-const unsigned long interval = 2000; //ms
+const unsigned long interval = 10000; //ms
 
 // When did we last send?
 unsigned long last_sent;
