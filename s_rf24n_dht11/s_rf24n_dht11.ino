@@ -37,7 +37,7 @@ DHT dht;
 void setup(void)
 {
   Serial.begin(57600);
-  Serial.println("RF24Network TRANSMITTER");
+  Serial.println("Sensor for temperature and humidity");
  
   SPI.begin();
   radio.begin();
@@ -59,8 +59,6 @@ void loop(void)
     
     humidity = dht.getHumidity();
     temperature = dht.getTemperature();
-    
-    Serial.print(temperature);
     
     Serial.print("Sending...");
     message_dht11 payload = { millis(), 1, 0, temperature, humidity};

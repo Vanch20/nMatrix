@@ -6,4 +6,6 @@ struct message_dht11
   float temperature;
   float humidity;
   char* toString(void);
+  char* toSendString(void);
+  static char buffer[];
 };

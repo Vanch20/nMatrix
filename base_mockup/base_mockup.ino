@@ -11,6 +11,7 @@
 #include "messages.h"
 
 #define REQUEST_RATE 10000
+#define SEND_TIMEOUT 10000
 
 const char webhost[] PROGMEM = "api.rarasun.com";
 const char url_basereg[] PROGMEM  = "/basepoint/reg/";
@@ -35,26 +36,26 @@ const uint16_t other_node = 1;
 
 static long timer;
 
-String server_result;
+int send_ok = 1;
+
+char result[100];
+
+int bytereaded;
 
 static void my_result_cb (byte status, word off, word len) {
-  Serial.print("<<< reply ");
-  Serial.print(millis() - timer);
-  Serial.println(" ms");
-//  Serial.println( (const char*) Ethernet::buffer + off);
-
-  /** need test **/
-  //char* test = (char*) Ethernet::buffer + off;
-  char r[100];
-  sprintf(r, "%s", Ethernet::buffer + off);
-  Serial.print("r:");
-  Serial.print(r);
-  /** **/
+  send_ok = 1;
+  //Serial.println(status);
+  //Serial.println(len);
+  //Serial.print(millis() - timer);
+  //Serial.println(" ms");
+  //Serial.println( (char*) Ethernet::buffer + off);
   
-  //String r = char(Ethernet::buffer + off);
-//  server_result = r.substring(r.indexOf("{"));
-//  Serial.print("result:");
-//  Serial.println(r);
+  /** need test **/
+  sscanf((const char *)Ethernet::buffer + off, "%[^{]%s", &result); 
+  
+  Serial.print("result: ");
+  Serial.println(result);
+  /** **/
 }
 
 void setup(void)
@@ -92,11 +93,14 @@ void setup(void)
   radio.begin();
   network.begin(/*channel*/ 90, /*node address*/ this_node);
   
-  timer = - REQUEST_RATE;
+  //timer = - SEND_TIMEOUT;
 }
 
 void loop(void)
 {
+  if (millis() > timer + SEND_TIMEOUT) {
+    send_ok = 1;
+  }
   
   ether.packetLoop(ether.packetReceive());
   
@@ -107,26 +111,25 @@ void loop(void)
     RF24NetworkHeader header;
     message_dht11 message;
     network.read(header, &message, sizeof(message));
-    Serial.print("Received Temperature:");
-    Serial.print(message.temperature);
-    Serial.print(" Humidity:");
-    Serial.print(message.humidity);
-    Serial.print(" at ");
-    Serial.print(message.ms);
+    Serial.print("Received: ");
+    Serial.print(message.toString());
     Serial.print(" from ");
     Serial.println(header.from_node);
     
-//    char* voltage;
-//    dtostrf(message.voltage, 1, 2, voltage);
-    String send_string = "?type=" + String(message.type);
-//    send_string += "&vlotage=" + String(voltage);
-    char* sends;
-    send_string.toCharArray(sends, send_string.length());
-    Serial.print("string:");
-    Serial.println(sends);
-    
-    timer = millis();
-    Serial.println("Sending to web...");
-    ether.browseUrl(PSTR("/node/update/"), "", webhost, my_result_cb);
+    if (send_ok == 1)
+    {
+      send_ok = 0;
+      timer = millis();
+      
+      /** need test **/
+      char data[100];
+      sprintf(data, "?type=%d&voltage=%.2f&v=%s", message.type, message.voltage, message.toPostString());
+      Serial.print("data:");
+      Serial.println(data);
+      /**  **/
+      
+      Serial.println("Sending to web...");
+      ether.browseUrl(PSTR("/node/update"), data, webhost, my_result_cb);
+    }
   }
 }
